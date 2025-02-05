@@ -89,65 +89,63 @@ func (b *ClientBuilder) Build() (*Client, error) {
 	}, nil
 }
 
-func (c *Client) HostInstancesGet(ctx context.Context) (*[]HostInstance, error) {
+func (c *Client) GetHostInstances(ctx context.Context) ([]HostInstance, error) {
 	return makeGetRequest[[]HostInstance](c, ctx, "/HostInstances")
 }
 
-func (c *Client) OperationalDataGetInstances(ctx context.Context) (*[]Instance, error) {
+func (c *Client) GetOperationalDataInstances(ctx context.Context) ([]Instance, error) {
 	return makeGetRequest[[]Instance](c, ctx, "/OperationalData/Instances")
 }
 
-func (c *Client) OperationalDataGetTrackedMessageEvent(ctx context.Context) (*[]TrackedMessageEvent, error) {
-	return makeGetRequest[[]TrackedMessageEvent](c, ctx, "/OperationalData/TrackedMessageEvents")
+func (c *Client) GetOperationalDataMessages(ctx context.Context) ([]Message, error) {
+	return makeGetRequest[[]Message](c, ctx, "/OperationalData/Messages")
 }
 
-func (c *Client) OperationalDataGetTrackedServiceInstances(ctx context.Context) (*[]TrackedServiceInstance, error) {
-	return makeGetRequest[[]TrackedServiceInstance](c, ctx, "/OperationalData/TrackedServiceInstances")
-}
-
-func (c *Client) OrchestrationsGet(ctx context.Context) (*[]Orchestration, error) {
+func (c *Client) GetOrchestrations(ctx context.Context) ([]Orchestration, error) {
 	return makeGetRequest[[]Orchestration](c, ctx, "/Orchestrations")
 }
 
-func (c *Client) ReceiveLocationsGet(ctx context.Context) (*[]ReceiveLocation, error) {
+func (c *Client) GetReceiveLocations(ctx context.Context) ([]ReceiveLocation, error) {
 	return makeGetRequest[[]ReceiveLocation](c, ctx, "/ReceiveLocations")
 }
 
-func (c *Client) ReceivePortsGet(ctx context.Context) (*[]ReceivePort, error) {
+func (c *Client) GetReceivePorts(ctx context.Context) ([]ReceivePort, error) {
 	return makeGetRequest[[]ReceivePort](c, ctx, "/ReceivePorts")
 }
 
-func (c *Client) SendPortGroupsGet(ctx context.Context) (*[]SendPortGroup, error) {
+func (c *Client) GetSendPortGroups(ctx context.Context) ([]SendPortGroup, error) {
 	return makeGetRequest[[]SendPortGroup](c, ctx, "/SendPortGroups")
 }
 
-func (c *Client) SendPortsGet(ctx context.Context) (*[]SendPort, error) {
+func (c *Client) GetSendPorts(ctx context.Context) ([]SendPort, error) {
 	return makeGetRequest[[]SendPort](c, ctx, "/SendPorts")
 }
 
-func makeGetRequest[T any](c *Client, ctx context.Context, endpoint string) (*T, error) {
+func makeGetRequest[T any](c *Client, ctx context.Context, endpoint string) (T, error) {
+	var empty T
+
 	fullUri, err := c.Host.Parse("BizTalkManagementService" + endpoint)
 	if err != nil {
-		return nil, err
+		return empty, err
 	}
 
 	req, err := http.NewRequest("GET", fullUri.String(), nil)
 	if err != nil {
-		return nil, err
+		return empty, err
 	}
 
 	req = req.WithContext(ctx)
 	res, err := c.Client.Do(req)
 	if err != nil {
-		return nil, err
+		return empty, err
 	}
 	if res == nil {
-		return nil, fmt.Errorf("error: calling %s returned empty response", fullUri.String())
+		return empty, fmt.Errorf("error: calling %s returned empty response", fullUri.String())
 	}
 
 	responseData, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, err
+		return empty, err
 	}
 
 	defer func(Body io.ReadCloser) {
@@ -158,7 +156,7 @@ func makeGetRequest[T any](c *Client, ctx context.Context, endpoint string) (*T,
 	}(res.Body)
 
 	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("error calling %s:\nstatus: %s\nresponseData: %s", fullUri.String(), res.Status, responseData)
+		return empty, fmt.Errorf("error calling %s:\nstatus: %s\nresponseData: %s", fullUri.String(), res.Status, responseData)
 	}
 
 	var responseObject T
@@ -166,8 +164,8 @@ func makeGetRequest[T any](c *Client, ctx context.Context, endpoint string) (*T,
 
 	if err != nil {
 		log.Printf("error unmarshaling response: %+v", err)
-		return nil, err
+		return empty, err
 	}
 
-	return &responseObject, nil
+	return responseObject, nil
 }
